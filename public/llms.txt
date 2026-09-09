@@ -1,0 +1,26 @@
+# Streamfinder · Moritz Vollmer
+
+> A German-language web application by Moritz Vollmer for finding streaming, rental, and purchase availability for films and TV series in Germany, Austria, and Switzerland.
+
+## Canonical Page
+
+- https://streamfinder.moritzvollmer.de/
+
+## Function
+
+Users search for films and TV series and view provider availability by country. A watchlist is stored locally by default. After optional account login, the watchlist can be synchronized across devices using Supabase.
+
+Film and series metadata comes from TMDB. Provider availability is supplied by JustWatch through TMDB and can change at short notice. Users should confirm availability with the provider before purchasing or subscribing.
+
+This product uses the TMDB API but is not endorsed or certified by TMDB.
+
+## Data Sources
+
+- TMDB: https://www.themoviedb.org/
+- JustWatch provider data through TMDB: https://developer.themoviedb.org/reference/movie-watch-providers
+- Supabase: https://supabase.com/
+
+## Author
+
+- Moritz Vollmer: https://moritzvollmer.de/
+- More projects: https://moritzvollmer.de/projekte/
