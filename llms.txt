@@ -23,4 +23,3 @@ This product uses the TMDB API but is not endorsed or certified by TMDB.
 ## Author
 
 - Moritz Vollmer: https://moritzvollmer.de/
-- More projects: https://moritzvollmer.de/projekte/

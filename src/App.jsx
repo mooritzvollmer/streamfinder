@@ -252,5 +252,5 @@ function PageShell({ children, narrow }) {
       if (!error && typeof data === 'number') setUserCount(data)
     })
   }, [])
-  return <main className={narrow ? 'page narrow' : 'page'}><CursorFollow />{children}<footer><div><img src="/logo/mv_logo.svg" alt=""/><b>StreamFinder</b></div><nav><a href="https://moritzvollmer.de/">Portfolio</a><a href="https://moritzvollmer.de/projekte/">Weitere Projekte</a><a href="https://moritzvollmer.de/impressum/">Impressum</a><a href="https://moritzvollmer.de/datenschutz/">Datenschutz</a></nav>{userCount !== null && <p className="user-count">{userCount.toLocaleString('de-DE')} aktive Nutzer:innen</p>}<p>Film- und Seriendaten: TMDB. Verfügbarkeitsdaten: JustWatch über TMDB.</p></footer></main>
+  return <main className={narrow ? 'page narrow' : 'page'}><CursorFollow />{children}<footer><div><img src="/logo/mv_logo.svg" alt=""/><b>StreamFinder</b></div><nav><a href="https://moritzvollmer.de/">Portfolio</a><a href="https://moritzvollmer.de/impressum/">Impressum</a><a href="https://moritzvollmer.de/datenschutz/">Datenschutz</a></nav>{userCount !== null && <p className="user-count">{userCount.toLocaleString('de-DE')} aktive Nutzer:innen</p>}<p>Film- und Seriendaten: TMDB. Verfügbarkeitsdaten: JustWatch über TMDB.</p></footer></main>
 }
