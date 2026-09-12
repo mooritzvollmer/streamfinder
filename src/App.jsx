@@ -128,6 +128,21 @@ function SearchApp() {
   }, [items, defaultListId])
   const movieCount = watchlistItems.filter((item) => item.type === 'movie').length
   const seriesCount = watchlistItems.filter((item) => item.type === 'tv').length
+  const watchedCount = watchlistItems.filter((item) => item.watched).length
+  const accountSummary = (() => {
+    if (!watchlistItems.length) return 'Deine Watchlist ist noch leer. Zeit für den ersten Film oder die erste Serie.'
+    const preference = movieCount === seriesCount
+      ? 'Filme und Serien halten sich bei dir gerade die Waage.'
+      : movieCount > seriesCount
+        ? 'Filme geben auf deiner Watchlist aktuell den Ton an.'
+        : 'Serien geben auf deiner Watchlist aktuell den Ton an.'
+    const progress = watchedCount === watchlistItems.length
+      ? 'Alle Titel sind bereits als angesehen markiert.'
+      : watchedCount === 0
+        ? 'Noch kein Titel ist als angesehen markiert.'
+        : `${watchedCount} ${watchedCount === 1 ? 'Titel ist' : 'Titel sind'} bereits als angesehen markiert.`
+    return `Du hast ${watchlistItems.length} Titel auf deiner Watchlist: ${movieCount} ${movieCount === 1 ? 'Film' : 'Filme'} und ${seriesCount} ${seriesCount === 1 ? 'Serie' : 'Serien'}. ${preference} ${progress}`
+  })()
   const shown = (tab === 'search' ? results : watchlistItems).filter((item) => filter === 'all' || item.type === filter)
   const keys = useMemo(() => new Set(items.map(itemKey)), [items])
   const openTitle = (item) => {
@@ -146,7 +161,7 @@ function SearchApp() {
           : <p className="eyebrow">Streamen, leihen, kaufen</p>}
         <h1>Was willst du <em>heute</em> sehen?</h1>
         {user
-          ? <p>Du hast {watchlistItems.length} Titel auf deiner Watchlist. Davon sind {movieCount} {movieCount === 1 ? 'Film' : 'Filme'} und {seriesCount} {seriesCount === 1 ? 'Serie' : 'Serien'} dabei. Eine Auswahl, die mit deinen eigenen Entdeckungen wächst.</p>
+          ? <p>{accountSummary}</p>
           : <p>Finde in Sekunden heraus, wo Filme und Serien laufen. Deine Watchlist bleibt lokal, bis du dich einloggst. Danach wird sie geräteübergreifend synchronisiert.</p>}
       </div>
       <div className="panel">
