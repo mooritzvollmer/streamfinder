@@ -13,3 +13,5 @@
 .account-name .greeting{font-weight:400}.account-name .greeting b{font-weight:700}.account-name .hand-icon{color:#f9a8d4}.logout-button{color:#62748e}.logout-button:hover{color:#e2e8f0}
 .user-count{color:#62748e;font-size:11px}
 @media(max-width:560px){.account-name{width:auto;padding:0 10px}.account-name span{display:inline}.logout-button span{display:none}}
+.primary{min-height:40px;padding:0 16px}.primary.small{min-height:38px}.intro-account{display:flex;align-items:center;gap:9px;margin:0;color:#cad5e2;font-size:14px}.intro-account b{color:#fff;font-weight:700}.intro-account .hand-icon{width:18px;height:18px;color:#f9a8d4}.detail-copy h1{font-size:32px}.watch-button{display:inline-flex;align-items:center;min-height:32px;padding:0 11px;border-radius:999px;font-size:12px}.detail-overview{font-size:14px}
+@media(max-width:560px){.detail-grid{grid-template-columns:minmax(0,1fr)}.detail-poster{width:100%;min-width:0;max-width:none}.detail-poster img{display:block;width:100%;height:auto}}

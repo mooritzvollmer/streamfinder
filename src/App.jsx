@@ -13,10 +13,10 @@ export function App() {
   return isDetail ? <TitleDetails /> : <SearchApp />
 }
 
-function Header({ user, username, onLogin, onLogout }) {
+function Header({ user, onLogin, onLogout }) {
   return <nav className="topbar">
     <a className="brand" href="/" aria-label="Streamfinder Startseite"><img src="/logo/mv_logo.svg" alt="" /><span>Stream<strong>Finder</strong></span></a>
-    {user ? <div className="account"><button className="account-name" type="button"><HandIcon/><span className="greeting">Hallo, <b>{username || user.email}</b></span></button><button className="quiet logout-button" onClick={onLogout} aria-label="Logout"><LogoutIcon/><span>Logout</span></button></div> : <button className="primary small" onClick={onLogin}>Login</button>}
+    {user ? <button className="quiet logout-button" onClick={onLogout} aria-label="Logout"><LogoutIcon/><span>Logout</span></button> : <button className="primary small" onClick={onLogin}>Login</button>}
   </nav>
 }
 
@@ -126,6 +126,8 @@ function SearchApp() {
     })
     return [...unique.values()]
   }, [items, defaultListId])
+  const movieCount = watchlistItems.filter((item) => item.type === 'movie').length
+  const seriesCount = watchlistItems.filter((item) => item.type === 'tv').length
   const shown = (tab === 'search' ? results : watchlistItems).filter((item) => filter === 'all' || item.type === filter)
   const keys = useMemo(() => new Set(items.map(itemKey)), [items])
   const openTitle = (item) => {
@@ -135,10 +137,18 @@ function SearchApp() {
   }
 
   return <PageShell>
-    <Header user={user} username={username} onLogin={() => setAuthOpen(true)} onLogout={() => supabase.auth.signOut()} />
+    <Header user={user} onLogin={() => setAuthOpen(true)} onLogout={() => supabase.auth.signOut()} />
     {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
     <section className="hero-grid">
-      <div className="intro"><p className="eyebrow">Streamen, leihen, kaufen</p><h1>Was willst du <em>heute</em> sehen?</h1><p>Finde in Sekunden heraus, wo Filme und Serien laufen. Deine Watchlist bleibt lokal, bis du dich einloggst. Danach wird sie geräteübergreifend synchronisiert.</p></div>
+      <div className="intro">
+        {user
+          ? <p className="intro-account"><HandIcon/><span>Hallo, <b>{username || user.email}</b></span></p>
+          : <p className="eyebrow">Streamen, leihen, kaufen</p>}
+        <h1>Was willst du <em>heute</em> sehen?</h1>
+        {user
+          ? <p>Du hast {watchlistItems.length} Titel auf deiner Watchlist. Davon sind {movieCount} {movieCount === 1 ? 'Film' : 'Filme'} und {seriesCount} {seriesCount === 1 ? 'Serie' : 'Serien'} dabei. Eine Auswahl, die mit deinen eigenen Entdeckungen wächst.</p>
+          : <p>Finde in Sekunden heraus, wo Filme und Serien laufen. Deine Watchlist bleibt lokal, bis du dich einloggst. Danach wird sie geräteübergreifend synchronisiert.</p>}
+      </div>
       <div className="panel">
         <div className="tabs"><button className={tab === 'search' ? 'active' : ''} onClick={() => setTab('search')}>Entdecken</button><button className={tab === 'watchlist' ? 'active' : ''} onClick={() => setTab('watchlist')}>Watchlist <b>{watchlistItems.length}</b></button></div>
         {tab === 'search' && <div className="searchbox"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Film oder Serie suchen ..." /><span>⌕</span></div>}
@@ -195,7 +205,7 @@ function TitleDetails() {
     if (!user) writeLocalItems(saved ? items.filter((entry) => itemKey(entry) !== itemKey(item)) : [item,...items])
   }
   function goBack() { if (history.length > 1) history.back(); else location.href = '/' }
-  return <PageShell narrow><button className="back" onClick={goBack}>← Zurück zur Suche</button><section className="detail">{loading && <p className="notice">Titel wird geladen …</p>}{error && <p className="notice error">{error}</p>}{title && <>{title.backdrop && <img className="backdrop" src={title.backdrop} alt="" />}<div className="detail-grid"><div className="detail-poster">{title.poster && <img src={title.poster} alt="" />}</div><div className="detail-copy"><p className="eyebrow">{title.type === 'movie' ? 'Film' : 'Serie'} · {title.year || 'Unbekannt'}</p><h1>{title.title}</h1><button className={`primary watch-button ${saved ? 'saved' : ''}`} onClick={toggle}>{saved ? '✓ In Watchlist' : '+ Zur Watchlist'}</button><div className="genres">{title.genres?.map((genre) => <span key={genre.id}>{genre.name}</span>)}</div>{title.overview && <p className="detail-overview">{title.overview}</p>}<ProviderGroups providers={title.providers} /></div></div></>}</section></PageShell>
+  return <PageShell narrow><button className="back" onClick={goBack}>← Zurück zur Suche</button><section className="detail">{loading && <p className="notice">Titel wird geladen …</p>}{error && <p className="notice error">{error}</p>}{title && <>{title.backdrop && <img className="backdrop" src={title.backdrop} alt="" />}<div className="detail-grid"><div className="detail-poster">{title.poster && <img src={title.poster} alt="" />}</div><div className="detail-copy"><p className="eyebrow">{title.type === 'movie' ? 'Film' : 'Serie'} · {title.year || 'Unbekannt'}</p><h1>{title.title}</h1><button className={`primary watch-button ${saved ? 'saved' : ''}`} onClick={toggle}>{saved ? '✓ Watchlist' : '+ Zur Watchlist'}</button><div className="genres">{title.genres?.map((genre) => <span key={genre.id}>{genre.name}</span>)}</div>{title.overview && <p className="detail-overview">{title.overview}</p>}<ProviderGroups providers={title.providers} /></div></div></>}</section></PageShell>
 }
 
 function ProviderGroups({ providers }) {
