@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { apiHeaders, edgeUrl, fromRow, itemKey, readLocalItems, supabase, writeLocalItems } from './lib.js'
 
-const emptyLists = [{ id: null, name: 'Meine Watchlist', is_default: true }]
-
 export function App() {
   const [, renderRoute] = useState(0)
   useEffect(() => {
@@ -12,7 +10,7 @@ export function App() {
   }, [])
   const params = new URLSearchParams(location.search)
   const isDetail = location.pathname.replace(/\/+$/, '') === '/title' && params.get('id')
-  return isDetail ? <TitleDetails /> : params.get('share') ? <SharedList token={params.get('share')} /> : <SearchApp />
+  return isDetail ? <TitleDetails /> : <SearchApp />
 }
 
 function Header({ user, username, onLogin, onLogout }) {
@@ -31,8 +29,7 @@ function SearchApp() {
   const [filter, setFilter] = useState(initial.get('filter') || restored.filter || 'all')
   const [results, setResults] = useState(restored.query === initialQuery ? restored.results || [] : [])
   const [items, setItems] = useState(readLocalItems)
-  const [lists, setLists] = useState(emptyLists)
-  const [activeList, setActiveList] = useState(null)
+  const [defaultListId, setDefaultListId] = useState(null)
   const [user, setUser] = useState(null)
   const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
@@ -55,12 +52,9 @@ function SearchApp() {
 
   async function loadRemote(userId) {
     setError('')
-    let listResult = await supabase.from('watchlists').select('id,name,is_default,is_public,share_token').eq('owner_id', userId).order('created_at')
-    const migrated = !listResult.error
-    if (migrated && listResult.data?.length) {
-      setLists(listResult.data)
-      const chosen = listResult.data.find((list) => list.is_default) || listResult.data[0]
-      setActiveList(chosen.id)
+    const listResult = await supabase.from('watchlists').select('id').eq('owner_id', userId).eq('is_default', true).maybeSingle()
+    if (!listResult.error) {
+      setDefaultListId(listResult.data?.id || null)
       const { data, error: itemError } = await supabase.from('watchlist_items').select('id,tmdb_id,media_type,title,year,poster,overview,created_at,watched,watchlist_id').eq('user_id', userId).order('created_at', { ascending: false })
       if (itemError) setError(itemError.message); else setItems((data || []).map(fromRow))
       return
@@ -99,45 +93,41 @@ function SearchApp() {
   useEffect(() => updateUrl(), [query, tab, filter])
 
   async function addItem(item) {
-    const normalized = { id: item.id, type: item.type, title: item.title, year: item.year || '', poster: item.poster, overview: item.overview || '', watched: false, watchlistId: activeList }
-    setItems((old) => old.some((entry) => itemKey(entry) === itemKey(item) && entry.watchlistId === activeList) ? old : [normalized, ...old])
+    const normalized = { id: item.id, type: item.type, title: item.title, year: item.year || '', poster: item.poster, overview: item.overview || '', watched: false, watchlistId: defaultListId }
+    setItems((old) => old.some((entry) => itemKey(entry) === itemKey(item)) ? old : [normalized, ...old])
     if (!user) return
     const payload = { user_id: user.id, tmdb_id: item.id, media_type: item.type, title: item.title, year: item.year || null, poster: item.poster, overview: item.overview || null }
-    if (activeList) payload.watchlist_id = activeList
-    const conflict = activeList ? 'watchlist_id,tmdb_id,media_type' : 'user_id,tmdb_id,media_type'
+    if (defaultListId) payload.watchlist_id = defaultListId
+    const conflict = defaultListId ? 'watchlist_id,tmdb_id,media_type' : 'user_id,tmdb_id,media_type'
     const { error } = await supabase.from('watchlist_items').upsert(payload, { onConflict: conflict })
     if (error) setError(error.message)
   }
 
   async function removeItem(item) {
-    setItems((old) => old.filter((entry) => !(itemKey(entry) === itemKey(item) && entry.watchlistId === item.watchlistId)))
+    setItems((old) => old.filter((entry) => itemKey(entry) !== itemKey(item)))
     if (!user) return
-    let request = supabase.from('watchlist_items').delete().eq('user_id', user.id).eq('tmdb_id', item.id).eq('media_type', item.type)
-    if (item.watchlistId) request = request.eq('watchlist_id', item.watchlistId)
-    const { error } = await request
+    const { error } = await supabase.from('watchlist_items').delete().eq('user_id', user.id).eq('tmdb_id', item.id).eq('media_type', item.type)
     if (error) setError(error.message)
   }
 
   async function toggleWatched(item) {
     const watched = !item.watched
-    setItems((old) => old.map((entry) => itemKey(entry) === itemKey(item) && entry.watchlistId === item.watchlistId ? { ...entry, watched } : entry))
+    setItems((old) => old.map((entry) => itemKey(entry) === itemKey(item) ? { ...entry, watched } : entry))
     if (!user) return
-    let request = supabase.from('watchlist_items').update({ watched }).eq('user_id', user.id).eq('tmdb_id', item.id).eq('media_type', item.type)
-    if (item.watchlistId) request = request.eq('watchlist_id', item.watchlistId)
-    const { error } = await request
+    const { error } = await supabase.from('watchlist_items').update({ watched }).eq('user_id', user.id).eq('tmdb_id', item.id).eq('media_type', item.type)
     if (error) setError('Für „angesehen“ muss noch die vorbereitete Datenbankmigration ausgeführt werden.')
   }
 
-  async function createList() {
-    if (!user) { setAuthOpen(true); return }
-    const name = prompt('Name der neuen Watchlist')?.trim()
-    if (!name) return
-    const { data, error } = await supabase.from('watchlists').insert({ owner_id: user.id, name }).select().single()
-    if (error) setError('Mehrere Listen werden nach der vorbereiteten Datenbankmigration verfügbar.'); else { setLists((old) => [...old, data]); setActiveList(data.id); setTab('watchlist') }
-  }
-
-  const shown = (tab === 'search' ? results : items.filter((item) => !activeList || item.watchlistId === activeList)).filter((item) => filter === 'all' || item.type === filter)
-  const keys = useMemo(() => new Set(items.filter((item) => !activeList || item.watchlistId === activeList).map(itemKey)), [items, activeList])
+  const watchlistItems = useMemo(() => {
+    const unique = new Map()
+    items.forEach((item) => {
+      const key = itemKey(item)
+      if (!unique.has(key) || item.watchlistId === defaultListId) unique.set(key, item)
+    })
+    return [...unique.values()]
+  }, [items, defaultListId])
+  const shown = (tab === 'search' ? results : watchlistItems).filter((item) => filter === 'all' || item.type === filter)
+  const keys = useMemo(() => new Set(items.map(itemKey)), [items])
   const openTitle = (item) => {
     updateUrl()
     history.pushState({ detail: true }, '', `/title?type=${item.type}&id=${item.id}`)
@@ -150,8 +140,8 @@ function SearchApp() {
     <section className="hero-grid">
       <div className="intro"><p className="eyebrow">Streamen, leihen, kaufen</p><h1>Was willst du <em>heute</em> sehen?</h1><p>Finde in Sekunden heraus, wo Filme und Serien laufen. Deine Watchlist bleibt lokal, bis du dich einloggst. Danach wird sie geräteübergreifend synchronisiert.</p></div>
       <div className="panel">
-        <div className="tabs"><button className={tab === 'search' ? 'active' : ''} onClick={() => setTab('search')}>Entdecken</button><button className={tab === 'watchlist' ? 'active' : ''} onClick={() => setTab('watchlist')}>Watchlist <b>{items.length}</b></button></div>
-        {tab === 'search' ? <div className="searchbox"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Film oder Serie suchen ..." /><span>⌕</span></div> : <div className="listbar"><select value={activeList || ''} onChange={(event) => setActiveList(event.target.value || null)}>{lists.map((list) => <option key={list.id || 'legacy'} value={list.id || ''}>{list.name}</option>)}</select><button onClick={createList}>+ Neue Liste</button>{activeList && <button onClick={async () => { const list = lists.find((entry) => entry.id === activeList); const { error: shareError } = await supabase.from('watchlists').update({ is_public: true }).eq('id', activeList); if (shareError) { setError('Teilen wird nach der vorbereiteten Datenbankmigration verfügbar.'); return } await navigator.clipboard.writeText(`${location.origin}/?share=${list.share_token}`); alert('Teilbarer Link wurde kopiert.') }}>Teilen</button>}</div>}
+        <div className="tabs"><button className={tab === 'search' ? 'active' : ''} onClick={() => setTab('search')}>Entdecken</button><button className={tab === 'watchlist' ? 'active' : ''} onClick={() => setTab('watchlist')}>Watchlist <b>{watchlistItems.length}</b></button></div>
+        {tab === 'search' && <div className="searchbox"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Film oder Serie suchen ..." /><span>⌕</span></div>}
         <div className="filters">{[['all','Alle'],['movie','Filme'],['tv','Serien']].map(([value,label]) => <button className={filter === value ? 'active' : ''} onClick={() => setFilter(value)} key={value}>{label}</button>)}</div>
         {error && <p className="notice error">{error}</p>}{loading && <p className="notice">Suche läuft …</p>}
         <div className="cards">{shown.map((item) => <TitleCard key={`${itemKey(item)}-${item.watchlistId || 'default'}`} item={item} inList={keys.has(itemKey(item))} watchlist={tab === 'watchlist'} onOpen={() => openTitle(item)} onAdd={() => addItem(item)} onRemove={() => removeItem(item)} onWatched={() => toggleWatched(item)} />)}{!loading && !shown.length && <p className="notice">{tab === 'watchlist' ? 'Deine Watchlist ist leer.' : query.length >= 2 ? 'Keine Treffer gefunden.' : 'Gib einen Film oder eine Serie ein.'}</p>}</div>
@@ -206,19 +196,6 @@ function TitleDetails() {
   }
   function goBack() { if (history.length > 1) history.back(); else location.href = '/' }
   return <PageShell narrow><button className="back" onClick={goBack}>← Zurück zur Suche</button><section className="detail">{loading && <p className="notice">Titel wird geladen …</p>}{error && <p className="notice error">{error}</p>}{title && <>{title.backdrop && <img className="backdrop" src={title.backdrop} alt="" />}<div className="detail-grid"><div className="detail-poster">{title.poster && <img src={title.poster} alt="" />}</div><div className="detail-copy"><p className="eyebrow">{title.type === 'movie' ? 'Film' : 'Serie'} · {title.year || 'Unbekannt'}</p><h1>{title.title}</h1><button className={`primary watch-button ${saved ? 'saved' : ''}`} onClick={toggle}>{saved ? '✓ In Watchlist' : '+ Zur Watchlist'}</button><div className="genres">{title.genres?.map((genre) => <span key={genre.id}>{genre.name}</span>)}</div>{title.overview && <p className="detail-overview">{title.overview}</p>}<ProviderGroups providers={title.providers} /></div></div></>}</section></PageShell>
-}
-
-function SharedList({ token }) {
-  const [list, setList] = useState(null), [items, setItems] = useState([]), [error, setError] = useState(''), [loading, setLoading] = useState(true)
-  useEffect(() => { (async () => {
-    const { data, error: shareError } = await supabase.rpc('shared_watchlist', { requested_token: token })
-    if (shareError || !data) { setError('Diese geteilte Watchlist ist nicht verfügbar.'); setLoading(false); return }
-    setList({ name: data.name })
-    setItems((data.items || []).map(fromRow))
-    setLoading(false)
-  })() }, [token])
-  const openTitle = (item) => { history.pushState(null, '', `/title?type=${item.type}&id=${item.id}`); dispatchEvent(new PopStateEvent('popstate')) }
-  return <PageShell narrow><Header /><a className="back" href="/">← Zum Streamfinder</a><section className="shared"><p className="eyebrow">Geteilte Watchlist</p><h1>{list?.name || 'Watchlist'}</h1>{loading && <p className="notice">Watchlist wird geladen …</p>}{error && <p className="notice error">{error}</p>}<div className="cards">{items.map((item) => <TitleCard key={itemKey(item)} item={item} inList watchlist={false} readOnly onOpen={() => openTitle(item)} />)}</div></section></PageShell>
 }
 
 function ProviderGroups({ providers }) {
