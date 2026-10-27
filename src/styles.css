@@ -17,3 +17,5 @@
 @media(max-width:560px){.detail-grid{grid-template-columns:minmax(0,1fr)}.detail-poster{width:100%;min-width:0;max-width:none}.detail-poster img{display:block;width:100%;height:auto}}
 
 .brand img{width:63px;height:36px;object-fit:contain;border-radius:0}footer img{width:59px;height:34px;object-fit:contain;border-radius:0}
+
+.brand img{width:36px;height:36px}footer img{width:32px;height:32px}

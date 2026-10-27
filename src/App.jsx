@@ -15,7 +15,7 @@ export function App() {
 
 function Header({ user, onLogin, onLogout }) {
   return <nav className="topbar">
-    <a className="brand" href="/" aria-label="Streamfinder Startseite"><img src="/logo/mv_logo.svg?v=signature-2" alt="" /><span>Stream<strong>Finder</strong></span></a>
+    <a className="brand" href="/" aria-label="Streamfinder Startseite"><img src="/logo/mv_logo.svg?v=motif-3" alt="" /><span>Stream<strong>Finder</strong></span></a>
     {user ? <button className="quiet logout-button" onClick={onLogout} aria-label="Logout"><LogoutIcon/><span>Logout</span></button> : <button className="primary small" onClick={onLogin}>Login</button>}
   </nav>
 }
@@ -254,5 +254,5 @@ function PageShell({ children, narrow }) {
       if (!error && typeof data === 'number') setUserCount(data)
     })
   }, [])
-  return <main className={narrow ? 'page narrow' : 'page'}><CursorFollow />{children}<footer><div><img src="/logo/mv_logo.svg?v=signature-2" alt=""/><b>StreamFinder</b></div><nav><a href="https://moritzvollmer.de/">Portfolio</a><a href="https://moritzvollmer.de/impressum/">Impressum</a><a href="https://moritzvollmer.de/datenschutz/">Datenschutz</a></nav>{userCount !== null && <p className="user-count">{userCount.toLocaleString('de-DE')} aktive Nutzer:innen</p>}<p>Film- und Seriendaten: TMDB. Verfügbarkeitsdaten: JustWatch über TMDB.</p></footer></main>
+  return <main className={narrow ? 'page narrow' : 'page'}><CursorFollow />{children}<footer><div><img src="/logo/mv_logo.svg?v=motif-3" alt=""/><b>StreamFinder</b></div><nav><a href="https://moritzvollmer.de/">Portfolio</a><a href="https://moritzvollmer.de/impressum/">Impressum</a><a href="https://moritzvollmer.de/datenschutz/">Datenschutz</a></nav>{userCount !== null && <p className="user-count">{userCount.toLocaleString('de-DE')} aktive Nutzer:innen</p>}<p>Film- und Seriendaten: TMDB. Verfügbarkeitsdaten: JustWatch über TMDB.</p></footer></main>
 }
