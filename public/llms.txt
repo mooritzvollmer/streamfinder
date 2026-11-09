@@ -8,17 +8,15 @@
 
 ## Function
 
-Users search for films and TV series and view provider availability by country. A watchlist is stored locally by default. After optional account login, the watchlist can be synchronized across devices using Supabase.
+Users search for films and TV series and view provider availability. A watchlist is stored locally by default. After optional account login, users can create, label, rename, and synchronize multiple lists across devices.
 
-Film and series metadata comes from TMDB. Provider availability is supplied by JustWatch through TMDB and can change at short notice. Users should confirm availability with the provider before purchasing or subscribing.
-
-This product uses the TMDB API but is not endorsed or certified by TMDB.
+Search results come from IMDb, detail metadata from Cinemeta, and provider links from WatchHub. Provider availability can change at short notice. Users should confirm availability with the provider before purchasing or subscribing.
 
 ## Data Sources
 
-- TMDB: https://www.themoviedb.org/
-- JustWatch provider data through TMDB: https://developer.themoviedb.org/reference/movie-watch-providers
-- Supabase: https://supabase.com/
+- IMDb: https://www.imdb.com/
+- Cinemeta: https://v3-cinemeta.strem.io/
+- WatchHub: https://watchhub.strem.io/
 
 ## Author
 
