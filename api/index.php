@@ -184,6 +184,40 @@ function localize_entries(array $entries, string $id_key = 'id'): array {
     return $entries;
 }
 
+// Keep IMDb's typo-tolerant suggestions, then broaden sparse result sets with
+// a significant title word/prefix. Exact-query suggestions always stay first.
+function search_suggestions(string $query): array {
+    $cache_key = 'sf_search_v2_' . md5(mb_strtolower($query));
+    $cached = get_transient($cache_key);
+    if (is_array($cached)) return $cached;
+    $read = static function(string $term): array {
+        $json = remote_json('https://v3.sg.media-imdb.com/suggestion/x/' . rawurlencode(mb_strtolower($term)) . '.json');
+        return array_values(array_filter($json['d'] ?? [], static function($entry) {
+            return !empty($entry['l']) && preg_match('/^tt\d+$/', (string)($entry['id'] ?? ''));
+        }));
+    };
+    $entries = $read($query);
+    if (count($entries) < 3 && mb_strlen($query) >= 3) {
+        $words = preg_split('/\s+/u', trim(preg_replace('/[^\p{L}\p{N}\s]/u', ' ', mb_strtolower($query))));
+        $significant = array_values(array_filter($words, static function($word) {
+            return mb_strlen($word) >= 3 && !in_array($word, ['der','die','das','ein','eine','und','the','and','von','mit'], true);
+        }));
+        $word = $significant[0] ?? '';
+        $fallback = count($significant) > 1 ? $word : (mb_strlen($word) >= 5 ? mb_substr($word, 0, max(3, min(6, mb_strlen($word)-2))) : '');
+        if ($fallback !== '' && $fallback !== mb_strtolower($query)) {
+            $entries = array_merge($entries, $read($fallback));
+        }
+    }
+    $unique = [];
+    foreach ($entries as $entry) {
+        if (!isset($unique[$entry['id']])) $unique[$entry['id']] = $entry;
+        if (count($unique) >= 12) break;
+    }
+    $results = array_values($unique);
+    set_transient($cache_key, $results, 15 * MINUTE_IN_SECONDS);
+    return $results;
+}
+
 install_schema();
 if (empty($_SESSION['streamfinder_csrf'])) $_SESSION['streamfinder_csrf'] = bin2hex(random_bytes(24));
 
@@ -302,10 +336,10 @@ if ($action === 'item' && $method === 'DELETE') {
 
 if ($action === 'search') {
     $query = clean_name($_GET['q'] ?? '', 100);
-    if (mb_strlen($query) < 2) respond(['results' => []]);
-    $json = remote_json('https://v3.sg.media-imdb.com/suggestion/x/' . rawurlencode(mb_strtolower($query)) . '.json');
+    if (mb_strlen($query) < 1) respond(['results' => []]);
+    $suggestions = search_suggestions($query);
     $results = [];
-    foreach (($json['d'] ?? []) as $entry) {
+    foreach ($suggestions as $entry) {
         if (empty($entry['id']) || strpos((string)$entry['id'], 'tt') !== 0 || empty($entry['l'])) continue;
         $qid = (string) ($entry['qid'] ?? '');
         $type = (stripos($qid, 'tv') === 0 && $qid !== 'tvMovie') ? 'tv' : 'movie';
